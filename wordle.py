@@ -1,33 +1,43 @@
-import numpy as np
-import plotly.graph_objects as go
+#!/usr/bin/python
+
+import sys
 import re
 import copy
+import numpy as np
+import datetime as dt
+# Only needed if you want to run the plot_probability or guess_all functions.
+#import plotly.graph_objects as go
 
-# Function to store an updated answers list (mostly used to increment the number for the word of the day).
+
+# Function to get the number for today's word of the day. New words seem to drop at midnight local time so this should be robust.
+# @returns - the number of the word of the day.
+def get_day_number():
+    # Date of the very first wordle.
+    og = dt.date(2021, 6, 19)
+    # Number of days since the first wordle = wordle number of the day.
+    return (dt.date.today() - og).days
+
+# Function to store an updated answers list.
 # @param num - number of the day to add to the answers list.
 # @param answers - list of possible answers.
-def store_answers(num, answers):
-    answers.append(str(num))
+def store_answers(answers):
     with open('answers.csv', 'w') as f:
         for i in answers:
-            f.write(str(i) + '\n')
+            f.write(i + '\n')
 
 
 # Function to open all required files into memory.
-# @returns num - index of current word of the day.
 # @returns primary_answers - list of all answers.
 # @returns initial_entropy - dictionary of initial entropy values.
 def open_files():
     with open('answers.csv') as f:
         primary_answers = f.read().splitlines()
-    num = int(primary_answers[-1])
-    del primary_answers[-1]
     with open('initial_entropy.csv') as f:
         temp = f.read().splitlines()
     initial_entropy = {}
     for i in temp:
         initial_entropy[i.split(',')[0]] = i.split(',')[1]
-    return num, primary_answers, initial_entropy
+    return primary_answers, initial_entropy
 
 
 # Function to check the letters and their position of the input against the target word.
@@ -87,6 +97,7 @@ def plot_probability(answers, word):
     fig = go.Figure(data=go.Bar(x=[str(x) for x in list(freq.keys())], y=list(freq.values()))).update_layout(xaxis={'visible': False, 'showticklabels': False})
     fig.show()
 
+
 # Function to calculate an entropy value for every word in the list of answers.
 # @param answers - list of words that are possible answers.
 # @returns - sorted dictionary relating each word with its calculated entropy.
@@ -113,6 +124,7 @@ def get_entropy(answers):
         entropy_dict[target] = entropy
     # Return the sorted entropy dictionary with the highest entropy word at the top.
     return dict(sorted(entropy_dict.items(), key = lambda x: x[1], reverse=True))
+
 
 # Function to reduce the subspace of an answers list based on a guess.
 # @param answers - list of accepted words
@@ -150,7 +162,10 @@ def get_subanswers(answers, guess, match_array):
 # @param answers - the complete list of possible answers.
 # @param word - the word we are trying to guess.
 # @param initial_entropy - the starting dict of entropies.
-def wordle(answers, word, initial_entropy, output=True):
+# @param output - flag to decide whether the match array is printed (in Wordle emoji format).
+# @param print_guesses - flag to decide whether the guesses will be printed.
+# @returns - the number of guesses it took to get the answer.
+def wordle(answers, word, initial_entropy, output=True, print_guesses=False):
     match = [0, 0, 0, 0, 0]
     count = 0
     while sum(match) != 10:
@@ -166,6 +181,8 @@ def wordle(answers, word, initial_entropy, output=True):
         match = check_word(guess, word)
         # Get the reduced subspace of possible answers.
         answers = get_subanswers(answers, guess, match)
+        if print_guesses == True:
+            print(guess)
         # Output the results of our guess.
         if output == True:
             pretty_output(match)
@@ -182,7 +199,7 @@ def guess_all(answers, entropy):
     for word in primary_answers:
         print(word)
         guess_count.append(wordle(rolling_answers, word))
-        # Cheesy way to increase performance; remove all words that have already been used from the answer space.
+        # Cheesy way to increase performance; remove all words that have previously been answers from the answer space.
         rolling_answers.remove(word)
         rolling_entropy.pop(word)
 
@@ -191,10 +208,23 @@ def guess_all(answers, entropy):
     return np.array(guess_count).mean()
 
 
+# Get input files.
+primary_answers, initial_entropy = open_files()
+# If given in the command line, use the provided number of the day. Otherwise use the wordle of the day.
+if len(sys.argv) == 3:
+    num = int(sys.argv[2])
+else:
+    num = get_day_number()
+# Get number of tries to solve.
+count = wordle(primary_answers, primary_answers[num], initial_entropy, False, False)
+if count <= 6:
+    print('Wordle ' + str(num) + ' ' + str(count) + '/6')
+else:
+    print('Wordle ' + str(num) + ' X/6')
 
-num, primary_answers, initial_entropy = open_files()
-count = wordle(primary_answers, primary_answers[num], initial_entropy, False)
-print('Wordle ' + str(num - 1) + ' ' + str(count) + '/6')
-count = wordle(primary_answers, primary_answers[num], initial_entropy)
-num += 1
-store_answers(num, primary_answers)
+if len(sys.argv) > 1 and sys.argv[1].lower() == 'true':
+    print_guesses = True
+else:
+    print_guesses = False
+# Prints out the match matrix and prints the guesses, based on command line arguments.
+count = wordle(primary_answers, primary_answers[num], initial_entropy, True, print_guesses)
