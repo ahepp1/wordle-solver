@@ -1,6 +1,8 @@
 # wordle-solver
 
-"Optimally" solves Wordle using entropy. Only looks one layer deep for now so could be further improved. 
+Optimally\* solves Wordle using entropy.
+
+\*As of now each entropy calculation only goes one layer deep so this method could be firther improved. 
 
 # Execution
 
