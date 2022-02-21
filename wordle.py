@@ -6,7 +6,7 @@ import copy
 import numpy as np
 import datetime as dt
 # Only needed if you want to run the plot_probability or guess_all functions.
-#import plotly.graph_objects as go
+import plotly.graph_objects as go
 
 
 # Function to get the number for today's word of the day. New words seem to drop at midnight local time so this should be robust.
@@ -18,12 +18,19 @@ def get_day_number():
     return (dt.date.today() - og).days
 
 # Function to store an updated answers list.
-# @param num - number of the day to add to the answers list.
 # @param answers - list of possible answers.
 def store_answers(answers):
     with open('answers.csv', 'w') as f:
         for i in answers:
             f.write(i + '\n')
+
+
+# Function to store an updated initial entropy dictionary
+# @param entropy - dictionary of calculated entropies.
+def store_entropy(entropy):
+    with open('initial_entropy.csv', 'w') as f:
+        for i in entropy:
+            f.write(i + ',' + str(entropy[i]) + '\n')
 
 
 # Function to open all required files into memory.
@@ -197,11 +204,10 @@ def guess_all(answers, entropy):
     rolling_entropy = copy.deepcopy(initial_entropy)
     guess_count = []
     for word in primary_answers:
-        print(word)
-        guess_count.append(wordle(rolling_answers, word))
+        guess_count.append(wordle(rolling_answers, word, rolling_entropy, False, False))
         # Cheesy way to increase performance; remove all words that have previously been answers from the answer space.
-        rolling_answers.remove(word)
-        rolling_entropy.pop(word)
+        #rolling_answers.remove(word)
+        #rolling_entropy.pop(word)
 
     fig = go.Figure(data=go.Histogram(x=guess_count))
     fig.show()
