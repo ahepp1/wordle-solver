@@ -2,7 +2,7 @@
 
 Optimally\* solves Wordle using entropy.
 
-\*As of now each entropy calculation only goes one layer deep so this method could be firther improved. 
+\*Program only looks one layer deep, optimization has room to improve. 
 
 # Execution
 
